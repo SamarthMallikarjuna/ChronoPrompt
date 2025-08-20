@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ChronoPrompt</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f4f6fa;
+      margin: 0;
+      padding: 0 20px;
+      color: #333;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+    }
+    header h1 {
+      color: #2a72d4;
+      font-size: 28px;
+      display: flex;
+      align-items: center;
+    }
+    header h1::before {
+      content: '🔔';
+      margin-right: 10px;
+      font-size: 28px;
+    }
+    .card {
+      background-color: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      max-width: 500px;
+      margin: 0 auto 30px auto;
+    }
+    h2 { margin-top: 0; }
+    label {
+      display: block;
+      margin-top: 12px;
+      font-weight: 600;
+    }
+    input[type="text"], input[type="number"], input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    #setBtn, .wifi-btn {
+      width: 100%;
+      margin-top: 15px;
+      background-color: #2a72d4;
+      color: white;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #status, #wifiStatus {
+      text-align: center;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .reminder-section {
+      max-width: 600px;
+      margin: 40px auto;
+    }
+    .reminder-box {
+      border: 2px dashed #ccc;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+      background-color: white;
+    }
+    .reminder-item {
+      text-align: left;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .reminder-done {
+      color: green;
+      text-decoration: line-through;
+    }
+    .small {
+      font-size: 13px;
+      color: #666;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    if (location.protocol === 'https:') {
+      location.href = 'http://' + location.host + location.pathname + location.search;
+    }
+  </script>
+
+  <header>
+    <h1>ChronoPrompt</h1>
+  </header>
+
+  <!-- Wi-Fi Setup Card -->
+  <div class="card" id="wifiCard">
+    <h2>🔧 Wi-Fi Setup</h2>
+    <p class="small">Enter your router credentials and the Chrono Device IP.</p>
+    <label for="wifiSsid">SSID</label>
+    <input type="text" id="wifiSsid" placeholder="e.g. MyHomeWiFi" />
+    <label for="wifiPass">Password</label>
+    <input type="password" id="wifiPass" placeholder="Wi-Fi password" />
+    <label for="wifiIp">Chrono Device IP (optional)</label>
+    <input type="text" id="wifiIp" placeholder="e.g. 192.168.18.50 (default)" />
+    <button class="wifi-btn" id="connectWifiBtn">Send Wi-Fi Credentials </button>
+    <p id="wifiStatus"></p>
+  </div>
+
+  <!-- Reminder Section -->
+  <div class="card">
+    <h2>➕ New Reminder</h2>
+    <p class="small">Set a time and a message for your reminder.</p>
+    <form id="reminderForm">
+      <label for="message">Reminder</label>
+      <input type="text" id="message" placeholder="e.g. Take morning pills" required />
+      <label for="hour">Time</label>
+      <div style="display:flex; gap:10px;">
+        <input type="number" id="hour" placeholder="HH" min="0" max="23" required />
+        <input type="number" id="minute" placeholder="MM" min="0" max="59" required />
+      </div>
+      <label for="ip">Chrono Device IP</label>
+      <input type="text" id="ip" placeholder="e.g. 192.168.18.50" required />
+      <button type="submit" id="setBtn">Set Reminder</button>
+    </form>
+    <p id="status"></p>
+  </div>
+
+  <div class="reminder-section">
+    <h2>Your Reminders</h2>
+    <div class="reminder-box" id="reminders">
+      <p>No reminders yet<br><small>Set a reminder above to get started.</small></p>
+    </div>
+  </div>
+
+  <script>
+    const reminders = [];
+    const reminderBox = document.getElementById('reminders');
+
+    function renderReminders() {
+      const now = new Date();
+      reminderBox.innerHTML = '';
+      if (reminders.length === 0) {
+        reminderBox.innerHTML = '<p>No reminders yet<br><small>Set a reminder above to get started.</small></p>';
+        return;
+      }
+      reminders.forEach(r => {
+        const div = document.createElement('div');
+        const scheduledTime = new Date();
+        scheduledTime.setHours(r.hour);
+        scheduledTime.setMinutes(r.minute);
+        scheduledTime.setSeconds(0);
+        const isDue = now >= scheduledTime;
+        div.className = 'reminder-item';
+        if (isDue) div.classList.add('reminder-done');
+        div.textContent = `${r.hour.toString().padStart(2, '0')}:${r.minute.toString().padStart(2, '0')} - ${r.message} ${isDue ? '✅' : ''}`;
+        reminderBox.appendChild(div);
+      });
+    }
+
+    document.getElementById('reminderForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const hour = parseInt(document.getElementById('hour').value);
+      const minute = parseInt(document.getElementById('minute').value);
+      const message = document.getElementById('message').value;
+      const ip = document.getElementById('ip').value;
+      if (reminders.some(r => r.hour === hour && r.minute === minute)) {
+        document.getElementById('status').textContent = "A reminder at this time already exists.";
+        return;
+      }
+      try {
+        const response = await fetch(`http://${ip}/reminder`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hour, minute, message })
+        });
+        if (response.ok) {
+          reminders.push({ hour, minute, message });
+          renderReminders();
+          document.getElementById('status').textContent = "Reminder sent!";
+        } else {
+          const txt = await response.text().catch(()=>response.statusText);
+          document.getElementById('status').textContent = "Failed to send: " + txt;
+        }
+      } catch (err) {
+        document.getElementById('status').textContent = "Connection error.";
+      }
+    });
+
+    setInterval(renderReminders, 30000);
+
+    document.getElementById('connectWifiBtn').addEventListener('click', async () => {
+      const ssid = document.getElementById('wifiSsid').value.trim();
+      const password = document.getElementById('wifiPass').value.trim();
+      let espIp = document.getElementById('wifiIp').value.trim();
+      if (!ssid || !password) {
+        document.getElementById('wifiStatus').textContent = "Please enter SSID and password.";
+        return;
+      }
+      if (!espIp) espIp = '192.168.18.50';
+      document.getElementById('wifiStatus').textContent = "Sending credentials to ESP...";
+      try {
+        const response = await fetch(`http://${espIp}/wifi`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ssid, password })
+        });
+        if (response.ok) {
+          document.getElementById('wifiStatus').textContent = "Credentials sent — ESP trying to connect.";
+          document.getElementById('ip').value = espIp;
+        } else {
+          const txt = await response.text().catch(()=>response.statusText);
+          document.getElementById('wifiStatus').textContent = "Failed: " + txt;
+        }
+      } catch (err) {
+        document.getElementById('wifiStatus').textContent = "Connection error (can't reach ESP).";
+      }
+    });
+  </script>
+</body>
+</html>
